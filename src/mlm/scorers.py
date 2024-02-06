@@ -570,7 +570,7 @@ class MLMScorerPT(BaseScorer):
 
     @staticmethod
     def _check_support(model) -> bool:
-        return isinstance(model, transformers.XLMWithLMHeadModel) or isinstance(model, transformers.BertForMaskedLM) or isinstance(model, AlbertForMaskedLMOptimized) or isinstance(model, BertForMaskedLMOptimized) or isinstance(model, DistilBertForMaskedLMOptimized)
+        return isinstance(model, transformers.XLMWithLMHeadModel) or isinstance(model, transformers.BertForMaskedLM) or isinstance(model, AlbertForMaskedLMOptimized) or isinstance(model, BertForMaskedLMOptimized) or isinstance(model, DistilBertForMaskedLMOptimized) or isinstance(model, transformers.XLMRobertaForMaskedLM)
 
 
     def _ids_to_masked(self, token_ids: np.ndarray) -> List[Tuple[np.ndarray, List[int]]]:
@@ -742,6 +742,13 @@ class MLMScorerPT(BaseScorer):
                         out = self._model(input_ids=token_ids, lengths=valid_length, langs=langs)
                         # out[0] is what contains the distribution for the masked (batch_size, sequence_length, config.vocab_size)
                         # Reindex to only get the distributions at the masked positions (batch_size, config.vocab_size)
+                        out = out[0][list(range(split_size)),masked_positions.reshape(-1),:]
+                    elif isinstance(self._model.module, transformers.XLMRobertaForMaskedLM):
+                        # Because BERT does not take a length parameter
+                        alen = torch.arange(token_ids.shape[1], dtype=torch.long)
+                        alen = alen.to(ctx)
+                        mask = alen < valid_length[:, None]
+                        out = self._model(input_ids=token_ids, attention_mask=mask)
                         out = out[0][list(range(split_size)),masked_positions.reshape(-1),:]
                     else:
                         raise ValueError

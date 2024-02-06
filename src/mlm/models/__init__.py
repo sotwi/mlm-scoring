@@ -74,7 +74,7 @@ SUPPORTED_MLMS = [
     'roberta-large-en-cased',
     'bert-base-en-uncased-owt',
     'bert-base-multi-uncased',
-    'bert-base-multi-cased'
+    'bert-base-multi-cased',
 ]
 
 SUPPORTED_LMS = [
@@ -143,7 +143,13 @@ def get_pretrained(ctxs: List[mx.Context], name: str = 'bert-base-en-uncased', p
             # model.load_state_dict(new_state_dict)
 
         else:
-            raise ValueError("Model '{}' is not currently a supported PyTorch model".format(name))
+            try:
+                model, loading_info = transformers.AutoModelWithLMHead.from_pretrained(model_fullname, output_loading_info=True)
+                tokenizer = transformers.AutoTokenizer.from_pretrained(model_fullname, use_fast=False)
+                vocab = None
+
+            except:
+                raise ValueError("Model '{}' is not currently a supported PyTorch model".format(name))
 
     # Name format: model-size-lang-cased/uncased(-dataset / special characteristic)
     # e.g., 'bert-base-en-uncased-owt', 'gpt2-117m-en-cased'
